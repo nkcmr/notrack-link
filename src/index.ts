@@ -16,41 +16,57 @@ type LinkHop =
 			final: true;
 	  };
 
-function deleteSearchParam(params: URLSearchParams, key: string): boolean {
-	if (params.has(key)) {
-		params.delete(key);
-		return true;
-	}
-	return false;
-}
 function cleanLink(url: string): [string, boolean] {
 	const cloneURL = URL.parse(url);
 	if (!cloneURL) {
 		return [url, false];
 	}
-	let modified = false;
+	const deleteParams = [];
 	switch (cloneURL.host) {
 		case 'youtu.be':
 		case 'www.youtube.com':
-			modified = deleteSearchParam(cloneURL.searchParams, 'si') || modified;
-			modified = deleteSearchParam(cloneURL.searchParams, 'feature') || modified;
+			for (let dp of ['si', 'feature']) {
+				if (cloneURL.searchParams.has(dp)) {
+					deleteParams.push(dp);
+				}
+			}
 			break;
 	}
+
 	for (let trackerParam of [
 		// https://en.wikipedia.org/wiki/UTM_parameters
+		'utm_id',
 		'utm_source',
 		'utm_medium',
 		'utm_campaign',
 		'utm_term',
 		'utm_content',
 
+		// salesforce
+		/^sfmc_(journey_(id|name)|activity_?(id|name)|asset_id|channel|id)$/,
+
 		// common ad-hoc tracker
 		'ref',
 	]) {
-		modified = deleteSearchParam(cloneURL.searchParams, trackerParam) || modified;
+		if (trackerParam instanceof RegExp) {
+			for (let param of cloneURL.searchParams.keys()) {
+				if (trackerParam.test(param)) {
+					deleteParams.push(param);
+				}
+			}
+			continue;
+		}
+		if (cloneURL.searchParams.has(trackerParam)) {
+			deleteParams.push(trackerParam);
+		}
 	}
-	cloneURL.search = cloneURL.searchParams.toString();
-	return [cloneURL.toString(), modified];
+	if (deleteParams.length === 0) {
+		return [url, false];
+	}
+	for (let dp of deleteParams) {
+		cloneURL.searchParams.delete(dp);
+	}
+	return [cloneURL.toString(), true];
 }
 
 function randint(min: number, max: number) {
