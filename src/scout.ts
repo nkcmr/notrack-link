@@ -107,9 +107,11 @@ export function followLink(linkHref: ValidURLString): AsyncIterable<LinkHop> {
 							'Cache-Control': 'no-cache',
 							Pragma: 'no-cache',
 						},
-					}).catch((e) => ({
-						error: `request failed: ${e.message || e}`,
-					})),
+					}).catch(
+						(e): FetchFailure => ({
+							error: `request failed: ${e.message || e}`,
+						})
+					),
 					timeoutPromise.then(
 						(): FetchFailure => ({
 							error: 'timeout',
