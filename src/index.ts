@@ -56,7 +56,9 @@ export default {
 				return cachedResponse;
 			}
 			const freshResponse = await env.BUILD_ASSETS.fetch(newURL, request);
-			ctx.waitUntil(caches.default.put(request, freshResponse.clone()));
+			if (freshResponse.ok) {
+				ctx.waitUntil(caches.default.put(request, freshResponse.clone()));
+			}
 			return freshResponse;
 		}
 
