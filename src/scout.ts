@@ -40,6 +40,7 @@ function cleanLink(url: string): [string, boolean] {
 		'utm_term',
 		'utm_content',
 		'utm_channel',
+		'utm_mailing',
 
 		// salesforce
 		/^sfmc_(journey_(id|name)|activity_?(id|name)|asset_id|channel|id)$/,
