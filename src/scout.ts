@@ -1,14 +1,13 @@
 export type LinkHop =
 	| {
 			seq: number;
-			location: string;
+			location: { original: string };
 			status_code?: number;
 			final: false;
 	  }
 	| {
 			seq: number;
-			location: string;
-			cleaned_location?: string;
+			location: { original: string; cleaned?: string; removed_params: string[] };
 			status_code?: number;
 			error?: string;
 			final: true;
@@ -115,10 +114,10 @@ async function getCleanLinkRules(): Promise<RulesProcessor> {
 	};
 }
 
-async function cleanLink(url: string): Promise<[string, boolean]> {
+async function cleanLink(url: string): Promise<[string, string[]]> {
 	const cloneURL = URL.parse(url);
 	if (!cloneURL) {
-		return [url, false];
+		return [url, []];
 	}
 
 	console.time('getCleanLinkRules');
@@ -186,12 +185,12 @@ async function cleanLink(url: string): Promise<[string, boolean]> {
 	// 	}
 	// }
 	if (deleteParams.size === 0) {
-		return [url, false];
+		return [url, []];
 	}
 	for (let dp of deleteParams.values()) {
 		cloneURL.searchParams.delete(dp);
 	}
-	return [cloneURL.toString(), true];
+	return [cloneURL.toString(), [...deleteParams.values()]];
 }
 
 type FetchFailure = {
@@ -212,6 +211,67 @@ export type ValidURLString = string & { __valid_url: string };
 
 export function isValidURLString(s: string): s is ValidURLString {
 	return URL.canParse(s);
+}
+
+function parseHTTPEquivRefresh(content: string): { time: number; url: string } | null {
+	const timePattern = /^\s*(?<time>[0-9]+)\s*[;,]/g;
+	let time: number | undefined;
+	for (let match of content.matchAll(timePattern)) {
+		if (!match.groups) {
+			continue;
+		}
+		const timeValue = parseInt(match.groups.time, 10);
+		if (!isNaN(timeValue)) {
+			time = timeValue;
+			break;
+		}
+	}
+	if (typeof time !== 'number') {
+		console.log('parseHTTPEquivRefresh: no valid time');
+		return null;
+	}
+	const urlPattern = /[,;]\s*url\s*=\s*/gi;
+	let url: string | undefined;
+	const urlMatches = [...content.matchAll(urlPattern)];
+	if (urlMatches.length !== 1) {
+		console.log('parseHTTPEquivRefresh: no valid url');
+		return null;
+	}
+	const urlStartIdx = urlMatches[0].index + urlMatches[0][0].length;
+	url = content.slice(urlStartIdx).trim();
+	if ((url.startsWith('"') && url.endsWith('"')) || (url.startsWith("'") && url.endsWith("'"))) {
+		url = url.slice(1, -1);
+	}
+	return { time, url };
+}
+
+async function extractHTMLRedirect(response: Response): Promise<string | null> {
+	const r = new HTMLRewriter();
+	let refresh: ReturnType<typeof parseHTTPEquivRefresh> = null;
+	r.on(
+		'meta',
+		new (class implements HTMLRewriterElementContentHandlers {
+			element(element: Element) {
+				const httpEquiv = element.getAttribute('http-equiv');
+				const content = element.getAttribute('content');
+				if (httpEquiv?.toLowerCase() !== 'refresh' || !content) {
+					return;
+				}
+				const ref = parseHTTPEquivRefresh(content);
+				if (!ref) {
+					return;
+				}
+				if (!refresh || ref.time <= refresh.time) {
+					refresh = ref;
+				}
+			}
+		})()
+	);
+	await r.transform(response).text();
+	if (!refresh) {
+		return null;
+	}
+	return (refresh as any).url;
 }
 
 export function followLink(linkHref: ValidURLString): AsyncIterable<LinkHop> {
@@ -248,50 +308,58 @@ export function followLink(linkHref: ValidURLString): AsyncIterable<LinkHop> {
 				let responseCode: number | undefined;
 				if (response instanceof Response) {
 					responseCode = response.status;
-					if (response.ok && response.headers.get('content-type')?.includes('text/html')) {
-						// const r = new HTMLRewriter()
-						// r.on('meta', new class {})
-						// r.transform(response)
+					let location: ValidURLString | null = null;
+					if (response.status === 200 && response.headers.get('content-type')?.includes('text/html')) {
+						const redirectURL = await extractHTMLRedirect(response.clone());
+						if (redirectURL) {
+							const nextURL = URL.parse(redirectURL, currentURL);
+							if (!nextURL) {
+								throw new Error(`invalid http-equiv refresh found in ${currentURL}`);
+							}
+							location = nextURL.toString() as ValidURLString;
+						}
+					} else if (response.headers.has('location')) {
+						const locationHeader = response.headers.get('location');
+						const nextURL = URL.parse(locationHeader!, currentURL);
+						if (!nextURL) {
+							throw new Error(`invalid location header received from ${currentURL}: ${locationHeader}`);
+						}
+						location = nextURL.toString() as ValidURLString;
+					} else if (!response.ok) {
+						error = `unexpected http status (${response.status} ${response.statusText})`;
 					}
-					const final = ![301, 302, 303, 307, 308].includes(response.status);
-					console.log(`response: url=${currentURL} status=${response.status} final=${final}`);
-					if (!final) {
+					console.log(`response: url=${currentURL} status=${response.status} final=${!location} next_location=${location || 'null'}`);
+					if (location) {
 						yield {
 							seq: redirectCount,
-							location: currentURL,
+							location: { original: currentURL },
 							final: false,
 							status_code: responseCode,
 						} satisfies LinkHop;
-						const nextLocation = response.headers.get('location');
-						if (!nextLocation) {
-							throw new Error(`redirect response contained no "location" header ${[...response.headers.keys()]}`);
-						}
-						const nextURL = URL.parse(nextLocation, currentURL);
-						if (!nextURL) {
-							throw new Error(`invalid location header received from ${currentURL}: ${nextLocation}`);
-						}
+
 						redirectCount++;
 						if (redirectCount < MAX_REDIRECTS) {
-							currentURL = nextURL.toString() as ValidURLString;
+							currentURL = location;
 							continue;
 						}
 						error = 'maximum redirects';
-					} else if (!response.ok) {
-						error = `non-ok response (${response.status} ${response.statusText})`;
 					}
 				} else {
 					error = response.error;
 				}
 				let cleanedLocation: string | undefined;
-				const [cleanedLink, didModify] = await cleanLink(currentURL);
-				if (didModify) {
+				const [cleanedLink, removedParams] = await cleanLink(currentURL);
+				if (removedParams) {
 					cleanedLocation = cleanedLink;
 				}
 				yield {
 					status_code: responseCode,
 					seq: redirectCount,
-					location: currentURL,
-					cleaned_location: cleanedLocation,
+					location: {
+						original: currentURL,
+						cleaned: cleanedLocation,
+						removed_params: removedParams,
+					},
 					error,
 					final: true,
 				} satisfies LinkHop;

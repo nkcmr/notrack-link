@@ -9,7 +9,8 @@
 		"test": "vitest",
 		"cf-typegen": "wrangler types",
 		"fe-bundle": "esbuild --bundle ./src/csr.tsx --outfile=./build/build.js --tree-shaking=true --minify --sourcemap=external",
-		"fe-build": "rm -rf build && mkdir build && npm run fe-bundle"
+		"fe-build": "rm -rf build && mkdir build && npm run fe-bundle",
+		"fe-dev": "esbuild --bundle ./src/csr.tsx --outfile=./build/build.js --sourcemap=inline --watch"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.5.2",

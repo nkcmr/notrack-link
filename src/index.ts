@@ -43,7 +43,6 @@ export default {
 			return new Response(readable, { headers: { 'content-type': 'text/event-stream' } });
 		}
 
-		// beep boop
 		if (baseu.pathname.startsWith('/assets')) {
 			const pathParts = baseu.pathname.split('/');
 			pathParts.shift(); // ""

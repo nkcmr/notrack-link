@@ -75,42 +75,50 @@ export function App({ getLocation }: AppProps) {
 					<p>
 						simply put any link after the domain name, like: <code>https://notrack.link/https://foo.bar</code>
 					</p>
+					<p>
+						try it out:{' '}
+						<a rel="noopener noreferrer nofollow" href="/https://bit.ly/3Yf8uaN">
+							fun article
+						</a>
+					</p>
 				</>
 			) : (
 				''
 			)}
 			<div id="results">
-				{hops.map((hopInfo) => (
-					<div className="hop" style={{ marginTop: '1.5em' }}>
-						{/* <pre>{JSON.stringify(hopInfo, null, 2)}</pre> */}
-						<code>hop ({hopInfo.seq})</code>
-						<br />
-						{hopInfo.final ? (
-							<>
-								<a rel="noopener noreferrer nofollow" href={hopInfo.cleaned_location || hopInfo.location}>
-									{hopInfo.cleaned_location || hopInfo.location}
-								</a>
-								<br />
-								{hopInfo.error ? (
-									<ErrorMessage>{hopInfo.error}</ErrorMessage>
-								) : (
-									<>
-										<span style={{ color: 'green', fontWeight: 'bold' }}>ok: </span>last stop in redirect chain ({hopInfo.status_code})
-									</>
-								)}
-								{hopInfo.cleaned_location && (
-									<>
-										<br />
-										(some link trackers removed)
-									</>
-								)}
-							</>
-						) : (
-							<code>{hopInfo.location}</code>
-						)}
-						<br />
-					</div>
-				))}
+				{hops.map((hopInfo, i) => {
+					const href = hopInfo.final ? hopInfo.location.cleaned || hopInfo.location.original : hopInfo.location.original;
+					return (
+						<div key={i} className="hop" style={{ marginTop: '1.5em' }}>
+							<code>hop ({hopInfo.seq})</code>
+							<br />
+							{hopInfo.final ? (
+								<>
+									<a rel="noopener noreferrer nofollow" href={href}>
+										{href}
+									</a>
+									<br />
+									{hopInfo.error ? (
+										<ErrorMessage>{hopInfo.error}</ErrorMessage>
+									) : (
+										<>
+											<span style={{ color: 'green', fontWeight: 'bold' }}>ok: </span>last stop in redirect chain ({hopInfo.status_code})
+										</>
+									)}
+									{hopInfo.location.removed_params.length > 0 && (
+										<>
+											<br />
+											(link trackers params removed <code>{hopInfo.location.removed_params.join(', ')}</code>)
+										</>
+									)}
+								</>
+							) : (
+								<code>{href}</code>
+							)}
+							<br />
+						</div>
+					);
+				})}
 			</div>
 			{err && (
 				<div>
