@@ -87,7 +87,9 @@ export function App({ getLocation }: AppProps) {
 			)}
 			<div id="results">
 				{hops.map((hopInfo, i) => {
-					const href = hopInfo.final ? hopInfo.location.cleaned || hopInfo.location.original : hopInfo.location.original;
+					const href = hopInfo.final
+						? (hopInfo.location.cleaned || hopInfo.location.original) + getLocation().hash
+						: hopInfo.location.original;
 					return (
 						<div key={i} className="hop" style={{ marginTop: '1.5em' }}>
 							<code>hop ({hopInfo.seq})</code>
