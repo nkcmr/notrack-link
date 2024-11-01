@@ -248,25 +248,24 @@ function parseHTTPEquivRefresh(content: string): { time: number; url: string } |
 async function extractHTMLRedirect(response: Response): Promise<string | null> {
 	const r = new HTMLRewriter();
 	let refresh: ReturnType<typeof parseHTTPEquivRefresh> = null;
-	r.on(
-		'meta',
-		new (class implements HTMLRewriterElementContentHandlers {
-			element(element: Element) {
-				const httpEquiv = element.getAttribute('http-equiv');
-				const content = element.getAttribute('content');
-				if (httpEquiv?.toLowerCase() !== 'refresh' || !content) {
-					return;
-				}
-				const ref = parseHTTPEquivRefresh(content);
-				if (!ref) {
-					return;
-				}
-				if (!refresh || ref.time <= refresh.time) {
-					refresh = ref;
-				}
+	const handler = new (class implements HTMLRewriterElementContentHandlers {
+		element(element: Element) {
+			const httpEquiv = element.getAttribute('http-equiv');
+			const content = element.getAttribute('content');
+			if (httpEquiv?.toLowerCase() !== 'refresh' || !content) {
+				return;
 			}
-		})()
-	);
+			const ref = parseHTTPEquivRefresh(content);
+			if (!ref) {
+				return;
+			}
+			if (!refresh || ref.time <= refresh.time) {
+				refresh = ref;
+			}
+		}
+	})();
+	r.on('meta', handler);
+	r.on('META', handler);
 	await r.transform(response).text();
 	if (!refresh) {
 		return null;
@@ -284,12 +283,17 @@ export function followLink(linkHref: ValidURLString): AsyncIterable<LinkHop> {
 			while (true) {
 				currentURL = currentURL.replace(/^http:\/\//i, 'https://') as ValidURLString;
 				await sleep(randint(50, 150));
+				let userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:130.0) Gecko/20100101 Firefox/130.0 notrack.link/1.0';
+				if (currentURL.toLowerCase().startsWith('https://t.co/')) {
+					// lol xitter
+					userAgent = 'curl/8.10.1';
+				}
 				const response = await Promise.race([
 					fetch(currentURL, {
 						redirect: 'manual',
 						headers: {
 							Accept: '*/*',
-							'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:130.0) Gecko/20100101 Firefox/130.0 notrack.link/1.0',
+							'User-Agent': userAgent,
 							'Cache-Control': 'no-cache',
 							Pragma: 'no-cache',
 						},
