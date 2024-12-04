@@ -116,7 +116,7 @@ export function App({ getLocation }: AppProps) {
 									{hopInfo.location.removed_params.length > 0 && (
 										<>
 											<br />
-											(link trackers params removed <code>{hopInfo.location.removed_params.join(', ')}</code>)
+											(link tracker params removed <code>{hopInfo.location.removed_params.join(', ')}</code>)
 										</>
 									)}
 								</>
