@@ -1,4 +1,5 @@
-import { followLink, isValidURLString } from './scout';
+import { WorkerEntrypoint } from 'cloudflare:workers';
+import { followLink, isValidURLString, LinkHop } from './scout';
 import { RenderIndex } from './ssr';
 
 function strbytes(s: string): Uint8Array {
@@ -9,6 +10,22 @@ function strbytes(s: string): Uint8Array {
 async function eventSourceEmit(w: WritableStreamDefaultWriter<Uint8Array>, event: string, data: any) {
 	await w.write(strbytes(`event: ${event}\n`));
 	await w.write(strbytes(`data: ${JSON.stringify(data)}\n\n`));
+}
+
+// allow other workers to cross-call
+export class UnwrapAPI extends WorkerEntrypoint {
+	async follow(link: string): Promise<LinkHop[]> {
+		const inputLink = atob(link);
+		if (!isValidURLString(inputLink)) {
+			throw new Error(`invalid url`);
+		}
+		return (
+			Array as ArrayConstructor & {
+				// this hasn't been added to any ts libs yet, but it still works.
+				fromAsync<T = unknown>(gen: AsyncIterable<T>): Promise<Array<T>>;
+			}
+		).fromAsync(followLink(inputLink, () => Promise.resolve()));
+	}
 }
 
 export default {

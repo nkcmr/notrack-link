@@ -142,48 +142,6 @@ async function cleanLink(url: string): Promise<[string, string[]]> {
 		matchedProviders,
 	});
 
-	// const deleteParams = [];
-	// switch (cloneURL.host) {
-	// 	case 'youtu.be':
-	// 	case 'www.youtube.com':
-	// 		for (let dp of ['si', 'feature']) {
-	// 			if (cloneURL.searchParams.has(dp)) {
-	// 				deleteParams.push(dp);
-	// 			}
-	// 		}
-	// 		break;
-	// }
-
-	// for (let trackerParam of [
-	// 	// https://en.wikipedia.org/wiki/UTM_parameters
-	// 	'utm_id',
-	// 	'utm_source',
-	// 	'utm_medium',
-	// 	'utm_campaign',
-	// 	'utm_term',
-	// 	'utm_content',
-	// 	'utm_channel',
-	// 	'utm_mailing',
-	// 	'utm_brand',
-
-	// 	// salesforce
-	// 	/^sfmc_(journey_(id|name)|activity_?(id|name)|asset_id|channel|id)$/,
-
-	// 	// common ad-hoc tracker
-	// 	'ref',
-	// ]) {
-	// 	if (trackerParam instanceof RegExp) {
-	// 		for (let param of cloneURL.searchParams.keys()) {
-	// 			if (trackerParam.test(param)) {
-	// 				deleteParams.push(param);
-	// 			}
-	// 		}
-	// 		continue;
-	// 	}
-	// 	if (cloneURL.searchParams.has(trackerParam)) {
-	// 		deleteParams.push(trackerParam);
-	// 	}
-	// }
 	if (deleteParams.size === 0) {
 		return [url, []];
 	}
@@ -273,7 +231,11 @@ async function extractHTMLRedirect(response: Response): Promise<string | null> {
 	return (refresh as any).url;
 }
 
-export function followLink(linkHref: ValidURLString): AsyncIterable<LinkHop> {
+function defaultIdle(): Promise<void> {
+	return sleep(randint(50, 150));
+}
+
+export function followLink(linkHref: ValidURLString, idle = defaultIdle): AsyncIterable<LinkHop> {
 	return {
 		async *[Symbol.asyncIterator]() {
 			let currentURL = linkHref;
@@ -282,7 +244,7 @@ export function followLink(linkHref: ValidURLString): AsyncIterable<LinkHop> {
 			const MAX_REDIRECTS = 10;
 			while (true) {
 				currentURL = currentURL.replace(/^http:\/\//i, 'https://') as ValidURLString;
-				await sleep(randint(50, 150));
+				await idle();
 				let userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:130.0) Gecko/20100101 Firefox/130.0 notrack.link/1.0';
 				if (currentURL.toLowerCase().startsWith('https://t.co/')) {
 					// lol xitter
