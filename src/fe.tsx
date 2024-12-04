@@ -81,6 +81,12 @@ export function App({ getLocation }: AppProps) {
 							fun article
 						</a>
 					</p>
+					<p>
+						check out the source code on{' '}
+						<a target="_blank" rel="noopener noreferrer" href="https://github.com/nkcmr/notrack-link">
+							GitHub
+						</a>
+					</p>
 				</>
 			) : (
 				''
