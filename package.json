@@ -12,9 +12,11 @@
 		"fe-build": "rm -rf build && mkdir build && npm run fe-bundle",
 		"fe-dev": "esbuild --bundle ./src/csr.tsx --outfile=./build/build.js --sourcemap=inline --watch"
 	},
-	"devDependencies": {
+	"dependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.5.41",
 		"@cloudflare/workers-types": "^4.20251014.0",
+		"react": "^19.2.0",
+		"react-dom": "^19.2.0",
 		"typescript": "^5.9.3",
 		"vitest": "2.0.5",
 		"wrangler": "^3.114.15"
