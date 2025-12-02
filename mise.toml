@@ -1,2 +1,4 @@
 [tools]
 node = "lts/jod"
+"npm:wrangler" = "latest"
+pnpm = "10"
