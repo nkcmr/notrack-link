@@ -1,3 +1,4 @@
+import { Badge, Box, Callout, Code, Container, Flex, Heading, Link, Spinner, Text } from '@radix-ui/themes';
 import { useEffect, useState } from 'react';
 import { isBrowser } from './runtime';
 import { LinkHop } from './scout';
@@ -11,14 +12,6 @@ function extractInputURL(original: URL): string {
 	const currentHost = original.host;
 	const hostStrIdx = href.indexOf(currentHost);
 	return href.slice(hostStrIdx + currentHost.length + 1 /* trim "/" */);
-}
-
-function ErrorMessage({ children }: { children: React.ReactNode }) {
-	return (
-		<>
-			<span style={{ color: 'red', fontWeight: 'bold' }}>error&nbsp;</span>&nbsp;{children}
-		</>
-	);
 }
 
 export function App({ getLocation }: AppProps) {
@@ -58,81 +51,102 @@ export function App({ getLocation }: AppProps) {
 	}, []);
 
 	return (
-		<div>
-			<h1>{validURL ? (done ? 'done!' : 'following link...') : 'notrack.link'}</h1>
-			{!!inputURL && !validURL ? (
-				<div>
-					<ErrorMessage>
-						invalid input URL: <code>{inputURL}</code>
-					</ErrorMessage>
-				</div>
-			) : (
-				''
-			)}
-			{!validURL ? (
-				<>
-					<p>hi! this site follows links for you and removes crappy tracking parameters.</p>
-					<p>
-						simply put any link after the domain name, like: <code>https://notrack.link/https://foo.bar</code>
-					</p>
-					<p>
-						try it out:{' '}
-						<a rel="noopener noreferrer nofollow" href="/https://bit.ly/3Yf8uaN">
-							fun article
-						</a>
-					</p>
-					<p>
-						check out the source code on{' '}
-						<a target="_blank" rel="noopener noreferrer" href="https://github.com/nkcmr/notrack-link">
-							GitHub
-						</a>
-					</p>
-				</>
-			) : (
-				''
-			)}
-			<div id="results">
-				{hops.map((hopInfo, i) => {
-					const href = hopInfo.final
-						? (hopInfo.location.cleaned || hopInfo.location.original) + getLocation().hash
-						: hopInfo.location.original;
-					return (
-						<div key={i} className="hop" style={{ marginTop: '1.5em' }}>
-							<code>hop ({hopInfo.seq})</code>
-							<br />
-							{hopInfo.final ? (
-								<>
-									<a rel="noopener noreferrer nofollow" href={href}>
-										{href}
-									</a>
-									<br />
-									{hopInfo.error ? (
-										<ErrorMessage>{hopInfo.error}</ErrorMessage>
+		<Container size="2" py="6" px="4">
+			<Flex direction="column" gap="4">
+				<Heading size="6">
+					{validURL ? (
+						<Flex align="center" gap="2">
+							{!done && <Spinner />}
+							{done ? 'done!' : 'following link...'}
+						</Flex>
+					) : (
+						'notrack.link'
+					)}
+				</Heading>
+
+				{!!inputURL && !validURL && (
+					<Callout.Root color="red">
+						<Callout.Text>
+							invalid input URL: <Code>{inputURL}</Code>
+						</Callout.Text>
+					</Callout.Root>
+				)}
+
+				{!validURL && (
+					<Flex direction="column" gap="3">
+						<Text>hi! this site follows links for you and removes crappy tracking parameters.</Text>
+						<Text>
+							simply put any link after the domain name, like:{' '}
+							<Code>https://notrack.link/https://foo.bar</Code>
+						</Text>
+						<Text>
+							try it out:{' '}
+							<Link rel="noopener noreferrer nofollow" href="/https://bit.ly/3Yf8uaN">
+								fun article
+							</Link>
+						</Text>
+						<Text>
+							check out the source code on{' '}
+							<Link target="_blank" rel="noopener noreferrer" href="https://github.com/nkcmr/notrack-link">
+								GitHub
+							</Link>
+						</Text>
+					</Flex>
+				)}
+
+				<Flex direction="column" gap="3" id="results">
+					{hops.map((hopInfo, i) => {
+						const href = hopInfo.final
+							? (hopInfo.location.cleaned || hopInfo.location.original) + getLocation().hash
+							: hopInfo.location.original;
+						return (
+							<Box key={i} p="3" style={{ borderRadius: 'var(--radius-3)', border: '1px solid var(--gray-a6)', background: 'var(--gray-a2)' }}>
+								<Flex direction="column" gap="1">
+									<Code size="1" color="gray">
+										hop ({hopInfo.seq})
+									</Code>
+									{hopInfo.final ? (
+										<>
+											<Link rel="noopener noreferrer nofollow" href={href} size="2" style={{ wordBreak: 'break-all' }}>
+												{href}
+											</Link>
+											{hopInfo.error ? (
+												<Callout.Root color="red" size="1">
+													<Callout.Text>{hopInfo.error}</Callout.Text>
+												</Callout.Root>
+											) : (
+												<Text size="2" color="green">
+													ok: last stop in redirect chain ({hopInfo.status_code})
+												</Text>
+											)}
+											{hopInfo.location.removed_params.length > 0 && (
+												<Text size="1" color="gray">
+													tracking params removed:{' '}
+													{hopInfo.location.removed_params.map((p, j) => (
+														<Badge key={j} color="orange" size="1" mr="1">
+															{p}
+														</Badge>
+													))}
+												</Text>
+											)}
+										</>
 									) : (
-										<>
-											<span style={{ color: 'green', fontWeight: 'bold' }}>ok: </span>last stop in redirect chain ({hopInfo.status_code})
-										</>
+										<Code size="2" style={{ wordBreak: 'break-all' }}>
+											{href}
+										</Code>
 									)}
-									{hopInfo.location.removed_params.length > 0 && (
-										<>
-											<br />
-											(link tracker params removed <code>{hopInfo.location.removed_params.join(', ')}</code>)
-										</>
-									)}
-								</>
-							) : (
-								<code>{href}</code>
-							)}
-							<br />
-						</div>
-					);
-				})}
-			</div>
-			{err && (
-				<div>
-					<ErrorMessage>{err}</ErrorMessage>
-				</div>
-			)}
-		</div>
+								</Flex>
+							</Box>
+						);
+					})}
+				</Flex>
+
+				{err && (
+					<Callout.Root color="red">
+						<Callout.Text>{err}</Callout.Text>
+					</Callout.Root>
+				)}
+			</Flex>
+		</Container>
 	);
 }
