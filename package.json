@@ -8,9 +8,8 @@
 		"start": "wrangler dev",
 		"test": "vitest",
 		"cf-typegen": "wrangler types",
-		"fe-bundle": "esbuild --bundle ./src/csr.tsx --outfile=./build/build.js --tree-shaking=true --minify --sourcemap=external --loader:.woff=file --loader:.woff2=file",
-		"fe-build": "rm -rf build && mkdir build && pnpm run fe-bundle",
-		"fe-dev": "esbuild --bundle ./src/csr.tsx --outfile=./build/build.js --sourcemap=inline --watch --loader:.woff=file --loader:.woff2=file"
+		"fe-build": "vite build",
+		"fe-dev": "vite build --watch"
 	},
 	"dependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.5.41",
@@ -18,9 +17,11 @@
 		"@radix-ui/themes": "^3.3.0",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
+		"@vitejs/plugin-react": "^5.1.4",
 		"react": "^19.2.4",
 		"react-dom": "^19.2.4",
 		"typescript": "^5.9.3",
+		"vite": "^7.3.1",
 		"vitest": "2.0.5",
 		"wouter": "^3.9.0",
 		"wrangler": "^4.71.0"

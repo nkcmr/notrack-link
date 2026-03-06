@@ -9,7 +9,7 @@ using ClearURLs rules. React 19 SSR + CSR frontend styled with Radix UI Themes.
 - **Language:** TypeScript (strict mode) + TSX (React 19, automatic JSX transform)
 - **Package manager:** pnpm (v10)
 - **Node version:** LTS/Jod (22.x), managed via `mise.toml`
-- **Frontend bundler:** esbuild (entry: `src/csr.tsx` → `build/build.js` + `build/build.css`)
+- **Frontend bundler:** Vite (entry: `src/csr.tsx` → `build/build.js` + `build/build.css`)
 - **Worker bundler/deployer:** Wrangler
 - **UI library:** Radix UI Themes (`@radix-ui/themes`)
 - **Test framework:** Vitest 2.0 with `@cloudflare/vitest-pool-workers`
@@ -20,8 +20,8 @@ using ClearURLs rules. React 19 SSR + CSR frontend styled with Radix UI Themes.
 ```bash
 pnpm install                              # install dependencies
 pnpm dev                                  # local dev server (wrangler dev)
-pnpm fe-build                             # clean build of frontend assets
-pnpm fe-dev                               # esbuild watch mode
+pnpm fe-build                             # clean build of frontend assets (vite build)
+pnpm fe-dev                               # vite watch mode
 pnpm deploy                               # fe-build + wrangler deploy
 pnpm test                                 # run all tests
 pnpm vitest run test/index.spec.ts        # run a single test file
@@ -57,6 +57,8 @@ Flat structure — no nested directories in `src/` or `test/`.
 
 - **SSR + hydration:** Worker renders HTML via `ssr.tsx` (`renderToReadableStream`),
   browser hydrates via `csr.tsx` (`hydrateRoot`). Both wrap `<App>` in Radix `<Theme>`.
+  Vite config (`vite.config.ts`) uses `rollupOptions` with a fixed `[name].js`/`[name][extname]`
+  output pattern so asset filenames stay predictable (`build.js`, `build.css`) without a manifest.
 - **SSE streaming:** `/iterhops/<url>` streams hop-by-hop results as Server-Sent Events.
   A `TransformStream` + `queueMicrotask` pattern lets the `Response` return immediately
   while the async hop loop writes to the writable side.
