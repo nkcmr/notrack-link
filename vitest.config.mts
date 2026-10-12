@@ -1,17 +1,15 @@
 import path from 'node:path';
-import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config';
+import { cloudflareTest } from '@cloudflare/vitest-plugin';
+import { defineConfig } from 'vitest/config';
 
-export default defineWorkersConfig({
+export default defineConfig({
+	plugins: [cloudflareTest({ wrangler: { configPath: './wrangler.toml' } })],
 	resolve: {
 		alias: {
 			'@radix-ui/themes': path.resolve('./test/radix-stub.ts'),
 		},
 	},
 	test: {
-		poolOptions: {
-			workers: {
-				wrangler: { configPath: './wrangler.toml' },
-			},
-		},
+		setupFiles: ['./test/setup.ts'],
 	},
 });
